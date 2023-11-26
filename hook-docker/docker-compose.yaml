@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  hook-db:
+    container_name: ${POSTGRES_SERVER}
+    image: postgres:13.0-alpine
+    restart: always
+    volumes:
+      - hook-postgres_data:/var/lib/postgresql/hook/
+    command: -p ${POSTGRES_PORT}
+    expose:
+      - ${POSTGRES_PORT}
+    env_file:
+      - ./.env
+    environment:
+      - POSTGRES_NAME=${POSTGRES_NAME}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_SERVER=${POSTGRES_SERVER}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+    networks:
+      - hook
+
+  hook-backend:
+    container_name: hook-backend
+    restart: always
+    build:
+      context: ../src
+      dockerfile: Dockerfile
+    env_file:
+      - ./.env
+    depends_on:
+      - hook-db
+    command: uvicorn application.main:app --reload --host 0.0.0.0 # --port 9993
+    volumes:
+      - ../src:/srv/www/app/
+    networks:
+      - hook
+    ports:
+      - 9993:8000
+
+volumes:
+  hook-postgres_data:
+
+networks:
+  hook:
